@@ -1,5 +1,6 @@
 defmodule FileTools.Storage do
   use Agent
+  require Logger
 
   @me __MODULE__
 
@@ -9,12 +10,15 @@ defmodule FileTools.Storage do
   end
 
   def load_storage(storage_name) do
-    storage_name
+    storage = storage_name
     |> File.stream!
     |> CSV.decode!(headers: true)
     |> Enum.reduce(%{}, fn row, acc ->
-      Map.update acc, row["md5"], [row], fn existing_value -> [row | existing_value] end
+      Map.update acc, row["md5"], [row], fn existing_rows -> [row | existing_rows] end
     end)
+
+    Logger.info "Storage size: #{map_size(storage)}"
+    storage
   end
 end
 
