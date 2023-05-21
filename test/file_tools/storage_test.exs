@@ -12,8 +12,19 @@ defmodule FileTools.StorageTest do
     assert length(res["4d8f17301c2cd86271a57f4335e8644d"]) == 2
   end
 
-  test "run" do
-    res = load_storage("data/files.csv")
-    IO.inspect map_size(res)
+  @tag tmp_dir: true
+  test "save_storage", context do
+    data1 = load_storage(@storage1)
+    IO.inspect data1
+
+    result_file1 = Path.join(context[:tmp_dir], "storage1.csv")
+    IO.inspect result_file1
+
+    res = save_storage(data1, result_file1)
+    IO.inspect res
+
+    res = File.read!(result_file1)
+    IO.puts res
+    assert File.stat!(@storage1).size == File.stat!(result_file1).size
   end
 end
