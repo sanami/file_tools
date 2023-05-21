@@ -1,8 +1,9 @@
 import Config
 
-config :logger,
+config :logger, :console,
   level: :debug,
-  backends: [:console]
+  format: "[$level] $metadata $message\n",
+  metadata: [:pid]
 
-env_file = "#{config_env()}.exs"
-if File.exists?("config/#{env_file}"), do: import_config(env_file)
+env_file = Path.expand "#{config_env()}.exs", __DIR__
+if File.exists?(env_file), do: import_config(env_file)
