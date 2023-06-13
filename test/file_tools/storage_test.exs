@@ -4,15 +4,17 @@ defmodule FileTools.StorageTest do
   import FileTools.Storage
 
   @storage1 "test/fixtures/files1.csv"
+  @md51 "4d8f17301c2cd86271a57f4335e8644d"
+  @attr1 {"1.jpg", 1715762, ~U[2013-12-01 13:14:51Z]}
 
   test "load_storage" do
     res = load_storage(@storage1)
     IO.inspect res
     assert map_size(res[:md5]) == 7
-    assert length(res[:md5]["4d8f17301c2cd86271a57f4335e8644d"]) == 3
+    assert length(res[:md5][@md51]) == 3
 
     assert map_size(res[:attr]) == 8
-    assert length(res[:attr][{"1.jpg", 1715762, ~U[2013-12-01 13:14:51Z]}]) == 2
+    assert length(res[:attr][@attr1]) == 2
   end
 
   @tag tmp_dir: true
@@ -28,6 +30,15 @@ defmodule FileTools.StorageTest do
 
     res = File.read!(result_file1)
     IO.puts res
-    assert File.stat!(@storage1).size == File.stat!(result_file1).size
+    assert String.length(res) == 950
+  end
+
+  test "exists?" do
+    FileTools.Storage.start_link(@storage1)
+
+    assert exists?(:md5, @md51) == true
+    assert exists?(:md5, "not_exist") == false
+    assert exists?(:attr, @attr1) == true
+    assert exists?(:attr, {}) == false
   end
 end

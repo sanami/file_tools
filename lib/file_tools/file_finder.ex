@@ -1,6 +1,8 @@
 defmodule FileTools.FileFinder do
   require Logger
 
+  @min_size 1000_000
+
   def list_folder(parent_pid, folder) do
     Logger.debug "FileFinder.list_folder #{folder}"
     unless parent_pid, do: FileTools.FileDispatcher.set_find_status(:started)
@@ -15,7 +17,7 @@ defmodule FileTools.FileFinder do
                 pid = spawn_link(FileTools.FileFinder, :list_folder, [self(), entry])
                 [pid|child_pids]
               :regular ->
-                FileTools.FileDispatcher.queue_file(entry, stat)
+                if stat.size >= @min_size, do: FileTools.FileDispatcher.queue_file(entry, stat)
                 child_pids
               _ ->
                 child_pids

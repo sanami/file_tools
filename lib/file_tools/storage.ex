@@ -10,6 +10,10 @@ defmodule FileTools.Storage do
     Agent.start_link(fn -> storage end, name: @me)
   end
 
+  def exists?(type, key) do
+    Agent.get(@me, &Map.has_key?(&1[type], key), :infinity)
+  end
+
   def load_storage(storage_name) do
     md5_storage = storage_name
     |> File.stream!
@@ -41,7 +45,7 @@ defmodule FileTools.Storage do
   end
 
   def save_storage(storage, storage_path) do
-    stream = Stream.transform storage, nil, fn {_md5, dup_entries}, acc ->
+    stream = Stream.transform storage[:md5], nil, fn {_md5, dup_entries}, acc ->
       # dup_entries = Enum.map dup_entries, fn row -> Map.values(row) end
       {dup_entries, acc}
     end

@@ -11,6 +11,7 @@ defmodule FileTools.Application do
       {:ok, self()}
     else
       children = [
+        {FileTools.Storage, "data/files.csv"},
         {FileTools.FileSupervisor, 1},
         {FileTools.FileDispatcher, 2}
       ]

@@ -10,7 +10,18 @@ defmodule FileTools.FileWorker do
   end
 
   def process_file(file_path, file_stat) do
-    #Logger.debug "FileWorker.process_file #{file_path}"
+    name = Path.basename(file_path)
+    size = file_stat.size
+    mtime = file_time(file_stat.mtime)
+
+    unless FileTools.Storage.exists?(:attr, {name, size, mtime}) do
+      Logger.info "FileWorker.process_file #{file_path}"
+    end
+  end
+
+  def file_time(time) do
+    {{y, m, d}, {hh, mm, ss}} = time
+    DateTime.new!(Date.new!(y, m, d), Time.new!(hh, mm, ss))
   end
 
   # Callbacks
