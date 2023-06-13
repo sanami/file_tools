@@ -8,8 +8,11 @@ defmodule FileTools.StorageTest do
   test "load_storage" do
     res = load_storage(@storage1)
     IO.inspect res
-    assert map_size(res) == 7
-    assert length(res["4d8f17301c2cd86271a57f4335e8644d"]) == 2
+    assert map_size(res[:md5]) == 7
+    assert length(res[:md5]["4d8f17301c2cd86271a57f4335e8644d"]) == 3
+
+    assert map_size(res[:attr]) == 8
+    assert length(res[:attr][{"1.jpg", 1715762, ~U[2013-12-01 13:14:51Z]}]) == 2
   end
 
   @tag tmp_dir: true

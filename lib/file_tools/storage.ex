@@ -11,18 +11,33 @@ defmodule FileTools.Storage do
   end
 
   def load_storage(storage_name) do
-    storage = storage_name
+    md5_storage = storage_name
     |> File.stream!
     |> CSV.decode!(headers: @headers)
+    |> Stream.drop(1) # header row
+    |> Stream.map(fn row ->
+        {:ok, mtime, _} = DateTime.from_iso8601(row[:mtime])
+        size = String.to_integer(row[:size])
+        %{row | mtime: mtime, size: size}
+      end)
     |> Enum.reduce(%{}, fn row, acc ->
-      Map.update(acc, row[:md5], [row], fn existing_rows ->
-        [row | existing_rows]
+        Map.update(acc, row[:md5], [row], fn existing_rows ->
+          [row | existing_rows]
+        end)
+      end)
+
+    attr_storage = Enum.reduce(md5_storage, %{}, fn {_md5, rows}, acc ->
+      Enum.reduce(rows, acc, fn row, acc ->
+        key = {Path.basename(row[:fs_path]), row[:size], row[:mtime]}
+
+        Map.update(acc, key, [row], fn existing_rows ->
+          [row | existing_rows]
+        end)
       end)
     end)
-    |> Map.delete("md5") # headers line
 
-    Logger.info "Storage size: #{map_size(storage)}"
-    storage
+    Logger.info "Storage size: #{map_size(md5_storage)}"
+    %{md5: md5_storage, attr: attr_storage}
   end
 
   def save_storage(storage, storage_path) do
