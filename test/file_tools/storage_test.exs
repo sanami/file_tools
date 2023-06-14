@@ -4,6 +4,7 @@ defmodule FileTools.StorageTest do
   import FileTools.Storage
 
   @storage1 "test/fixtures/files1.csv"
+  @file1 "test/fixtures/data1.txt"
   @md51 "4d8f17301c2cd86271a57f4335e8644d"
   @attr1 {"1.jpg", 1715762, ~U[2013-12-01 13:14:51Z]}
 
@@ -42,6 +43,24 @@ defmodule FileTools.StorageTest do
     assert exists?(:md5, "not_exist") == false
     assert exists?(:attr, @attr1) == true
     assert exists?(:attr, {}) == false
+  end
+
+  @tag tmp_dir: true
+  test "add", %{tmp_dir: tmp_dir} do
+    FileTools.Storage.start_link(@storage1)
+    row = %{
+      archive_path: "",
+      crc32: "",
+      fs_path: "/file1",
+      md5: "md5",
+      mtime: elem(@attr1, 2),
+      size: 1
+    }
+    IO.inspect row
+
+    FileTools.Storage.add(row)
+    result_file1 = Path.join(tmp_dir, "storage1.csv")
+    save(result_file1)
   end
 
   test "backup_storage" do

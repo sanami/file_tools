@@ -14,11 +14,38 @@ defmodule FileTools.Storage do
     Agent.get(@me, &Map.has_key?(&1[type], key), :infinity)
   end
 
-  def save do
-    Agent.get @me, fn storage ->
-      backup_storage(storage[:file])
-      save_storage(storage[:md5], storage[:file])
+  def add(row) do
+    Agent.update @me, fn state ->
+      md5_storage = add_md5_data(state[:md5], row)
+      attr_storage = add_attr_data(state[:attr], row)
+      %{state | md5: md5_storage, attr: attr_storage}
     end
+  end
+
+  def save(storage_file \\ nil) do
+    Agent.get @me, fn storage ->
+      unless storage_file do
+        backup_storage(storage[:file])
+      end
+
+      storage_file = storage_file || storage[:file]
+      Logger.info "Storage.save #{storage_file}"
+      save_storage(storage[:md5], storage_file)
+    end
+  end
+
+  def add_md5_data(md5_storage, row) do
+    Map.update(md5_storage, row[:md5], [row], fn existing_rows ->
+      [row | existing_rows]
+    end)
+  end
+
+  def add_attr_data(attr_storage, row) do
+    key = {Path.basename(row[:fs_path]), row[:size], row[:mtime]}
+
+    Map.update(attr_storage, key, [row], fn existing_rows ->
+      [row | existing_rows]
+    end)
   end
 
   def load_storage(storage_file) do
@@ -32,18 +59,12 @@ defmodule FileTools.Storage do
         %{row | mtime: mtime, size: size}
       end)
     |> Enum.reduce(%{}, fn row, acc ->
-        Map.update(acc, row[:md5], [row], fn existing_rows ->
-          [row | existing_rows]
-        end)
-      end)
+      add_md5_data(acc, row)
+    end)
 
     attr_storage = Enum.reduce(md5_storage, %{}, fn {_md5, rows}, acc ->
       Enum.reduce(rows, acc, fn row, acc ->
-        key = {Path.basename(row[:fs_path]), row[:size], row[:mtime]}
-
-        Map.update(acc, key, [row], fn existing_rows ->
-          [row | existing_rows]
-        end)
+        add_attr_data(acc, row)
       end)
     end)
 
@@ -72,7 +93,7 @@ defmodule FileTools.Storage do
       mtime = stat.mtime |> FileTools.FileWorker.file_time |> DateTime.to_unix
       backup_file = Path.join(backup_folder, "#{Path.basename(storage_file)}.#{mtime}")
 
-      Logger.info "backup_storage #{storage_file}"
+      Logger.info "Storage.backup_storage #{backup_file}"
       unless pretend, do: File.rename(storage_file, backup_file)
 
       backup_file

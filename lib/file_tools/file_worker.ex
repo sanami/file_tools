@@ -17,6 +17,17 @@ defmodule FileTools.FileWorker do
 
     unless FileTools.Storage.exists?(:attr, {name, size, mtime}) do
       Logger.info "FileWorker.process_file #{file_path}"
+
+      data = %{
+        archive_path: "",
+        crc32: "",
+        fs_path: file_path,
+        md5: file_hash(file_path, :md5),
+        mtime: mtime,
+        size: size
+      }
+
+      FileTools.Storage.add(data)
     end
   end
 
