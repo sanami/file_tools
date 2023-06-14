@@ -5,8 +5,8 @@ defmodule FileTools.Storage do
   @me __MODULE__
   @headers ~w(md5 fs_path size mtime crc32 archive_path)a
 
-  def start_link(storage_name) do
-    storage = load_storage(storage_name)
+  def start_link(storage_file) do
+    storage = load_storage(storage_file)
     Agent.start_link(fn -> storage end, name: @me)
   end
 
@@ -14,8 +14,15 @@ defmodule FileTools.Storage do
     Agent.get(@me, &Map.has_key?(&1[type], key), :infinity)
   end
 
-  def load_storage(storage_name) do
-    md5_storage = storage_name
+  def save do
+    Agent.get @me, fn storage ->
+      backup_storage(storage[:file])
+      save_storage(storage[:md5], storage[:file])
+    end
+  end
+
+  def load_storage(storage_file) do
+    md5_storage = storage_file
     |> File.stream!
     |> CSV.decode!(headers: @headers)
     |> Stream.drop(1) # header row
@@ -41,21 +48,34 @@ defmodule FileTools.Storage do
     end)
 
     Logger.info "Storage size: #{map_size(md5_storage)}"
-    %{md5: md5_storage, attr: attr_storage}
+    %{md5: md5_storage, attr: attr_storage, file: storage_file}
   end
 
-  def save_storage(storage, storage_path) do
-    stream = Stream.transform storage[:md5], nil, fn {_md5, dup_entries}, acc ->
+  def save_storage(storage, storage_file) do
+    stream = Stream.transform storage, nil, fn {_md5, dup_entries}, acc ->
       # dup_entries = Enum.map dup_entries, fn row -> Map.values(row) end
       {dup_entries, acc}
     end
 
-    IO.inspect Enum.take(stream, 2)
-
-    File.open!(storage_path, [:write, :utf8], fn file ->
+    File.open!(storage_file, [:write, :utf8], fn file ->
       stream
       |> CSV.encode(delimiter: "\n", headers: @headers)
       |> Enum.each(&IO.write(file, &1))
     end)
+  end
+
+  def backup_storage(storage_file, pretend \\ false) do
+    backup_folder = "tmp/backup"
+    File.mkdir_p(backup_folder)
+
+    with {:ok, stat} <- File.stat(storage_file) do
+      mtime = stat.mtime |> FileTools.FileWorker.file_time |> DateTime.to_unix
+      backup_file = Path.join(backup_folder, "#{Path.basename(storage_file)}.#{mtime}")
+
+      Logger.info "backup_storage #{storage_file}"
+      unless pretend, do: File.rename(storage_file, backup_file)
+
+      backup_file
+    end
   end
 end

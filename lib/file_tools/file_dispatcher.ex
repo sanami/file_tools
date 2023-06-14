@@ -54,7 +54,12 @@ defmodule FileTools.FileDispatcher do
   def handle_call(:take_file, _from, state) do
     if length(state[:queue]) == 0 do
       if state[:find_status] == :completed do
-        {:reply, :finish, %{state | worker_count: state[:worker_count] - 1}}
+        worker_count = state[:worker_count] - 1
+        if worker_count == 0 do
+          FileTools.Storage.save()
+        end
+
+        {:reply, :finish, %{state | worker_count: worker_count}}
       else
         {:reply, :wait, state}
       end

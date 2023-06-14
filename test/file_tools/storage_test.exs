@@ -15,6 +15,8 @@ defmodule FileTools.StorageTest do
 
     assert map_size(res[:attr]) == 8
     assert length(res[:attr][@attr1]) == 2
+
+    assert res[:file] == @storage1
   end
 
   @tag tmp_dir: true
@@ -25,7 +27,7 @@ defmodule FileTools.StorageTest do
     result_file1 = Path.join(context[:tmp_dir], "storage1.csv")
     IO.inspect result_file1
 
-    res = save_storage(data1, result_file1)
+    res = save_storage(data1[:md5], result_file1)
     IO.inspect res
 
     res = File.read!(result_file1)
@@ -40,5 +42,11 @@ defmodule FileTools.StorageTest do
     assert exists?(:md5, "not_exist") == false
     assert exists?(:attr, @attr1) == true
     assert exists?(:attr, {}) == false
+  end
+
+  test "backup_storage" do
+    res = backup_storage(@storage1, true)
+    IO.inspect res
+    assert String.starts_with?(res, "tmp/backup")
   end
 end
