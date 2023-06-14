@@ -17,4 +17,18 @@ defmodule FileTools.FileWorkerTest do
     IO.inspect res
     assert %DateTime{} = res
   end
+
+  describe "file_hash" do
+    test "md5" do
+      res = file_hash(@file1, :md5, 1)
+      IO.inspect res
+      assert res == "a2ef74a76b2bfcfe14817a27c511759c"
+    end
+
+    test "sha256" do
+      res = file_hash(@file1, :sha256, 1)
+      IO.inspect res
+      assert res == "55ca99ac594667d0ed8bce3f924020bc15840c8d29f316485d428354d8740606"
+    end
+  end
 end

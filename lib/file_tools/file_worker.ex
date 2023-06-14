@@ -4,6 +4,7 @@ defmodule FileTools.FileWorker do
   require Logger
 
   @me __MODULE__
+  @file_buffer_size 1048576
 
   def start_link(init_arg) do
     GenServer.start_link(@me, init_arg)
@@ -22,6 +23,18 @@ defmodule FileTools.FileWorker do
   def file_time(time) do
     {{y, m, d}, {hh, mm, ss}} = time
     DateTime.new!(Date.new!(y, m, d), Time.new!(hh, mm, ss))
+  end
+
+  def file_hash(file_path, algo \\ :md5, file_buffer_size \\ @file_buffer_size) do
+    File.stream!(file_path, [], file_buffer_size)
+    |> Enum.reduce(
+      :crypto.hash_init(algo),
+      fn (block, hash) ->
+        :crypto.hash_update(hash, block)
+      end)
+    |> :crypto.hash_final
+    |> Base.encode16
+    |> String.downcase
   end
 
   # Callbacks
