@@ -20,20 +20,36 @@ defmodule FileTools.StorageTest do
     assert res[:file] == @storage1
   end
 
-  @tag tmp_dir: true
-  test "save_storage", context do
-    data1 = load_storage(@storage1)
-    IO.inspect data1
+  describe "save_storage" do
+    @tag tmp_dir: true
+    test "csv", context do
+      data1 = load_storage(@storage1)
+      IO.inspect data1
 
-    result_file1 = Path.join(context[:tmp_dir], "storage1.csv")
-    IO.inspect result_file1
+      result_file1 = Path.join(context[:tmp_dir], "storage1.csv")
+      IO.inspect result_file1
 
-    res = save_storage(data1[:md5], result_file1)
-    IO.inspect res
+      res = save_storage(data1[:md5], result_file1, :csv)
+      IO.inspect res
 
-    res = File.read!(result_file1)
-    IO.puts res
-    assert String.length(res) == 950
+      res = File.read!(result_file1)
+      IO.puts res
+      assert String.length(res) == 950
+    end
+
+    @tag tmp_dir: true
+    test "md5", %{tmp_dir: tmp_dir} do
+      data1 = load_storage(@storage1)
+      result_file1 = Path.join(tmp_dir, "files.md5")
+      IO.inspect result_file1
+
+      res = save_storage(data1[:md5], result_file1, :md5)
+      IO.inspect res
+
+      res = File.read!(result_file1)
+      IO.puts res
+      assert String.length(res) == 504
+    end
   end
 
   test "exists?" do
@@ -45,9 +61,11 @@ defmodule FileTools.StorageTest do
     assert exists?(:attr, {}) == false
   end
 
-  @tag tmp_dir: true
-  test "add", %{tmp_dir: tmp_dir} do
+  test "add" do
     FileTools.Storage.start_link(@storage1)
+
+    assert exists?(:md5, "md5") == false
+
     row = %{
       archive_path: "",
       crc32: "",
@@ -59,8 +77,7 @@ defmodule FileTools.StorageTest do
     IO.inspect row
 
     FileTools.Storage.add(row)
-    result_file1 = Path.join(tmp_dir, "storage1.csv")
-    save(result_file1)
+    assert exists?(:md5, "md5")
   end
 
   test "backup_storage" do

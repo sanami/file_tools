@@ -22,16 +22,23 @@ defmodule FileTools.Storage do
     end
   end
 
-  def save(storage_file \\ nil) do
-    Agent.get @me, fn storage ->
-      unless storage_file do
-        backup_storage(storage[:file])
+  def save do
+    Agent.get(@me, fn storage ->
+      csv_file = storage[:file]
+      backup_storage(csv_file)
+
+      Logger.info "Storage.save CSV #{csv_file}"
+      save_storage(storage[:md5], csv_file, :csv)
+
+      md5_file = if String.ends_with?(csv_file, ".csv") do
+        String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
+      else
+        csv_file <> ".md5"
       end
 
-      storage_file = storage_file || storage[:file]
-      Logger.info "Storage.save #{storage_file}"
-      save_storage(storage[:md5], storage_file)
-    end
+      Logger.info "Storage.save MD5 #{md5_file}"
+      save_storage(storage[:md5], md5_file, :md5)
+    end, :infinity)
   end
 
   def add_md5_data(md5_storage, row) do
@@ -72,7 +79,7 @@ defmodule FileTools.Storage do
     %{md5: md5_storage, attr: attr_storage, file: storage_file}
   end
 
-  def save_storage(storage, storage_file) do
+  def save_storage(storage, storage_file, :csv) do
     stream = Stream.transform storage, nil, fn {_md5, dup_entries}, acc ->
       # dup_entries = Enum.map dup_entries, fn row -> Map.values(row) end
       {dup_entries, acc}
@@ -83,6 +90,15 @@ defmodule FileTools.Storage do
       |> CSV.encode(delimiter: "\n", headers: @headers)
       |> Enum.each(&IO.write(file, &1))
     end)
+  end
+
+  def save_storage(storage, storage_file, :md5) do
+    File.open! storage_file, [:write, :utf8], fn file ->
+      Enum.each storage, fn {_md5, dup_entries} ->
+        row = hd(dup_entries)
+        IO.write(file, [row[:md5], " ", "*", row[:fs_path], "\n"])
+      end
+    end
   end
 
   def backup_storage(storage_file, pretend \\ false) do
