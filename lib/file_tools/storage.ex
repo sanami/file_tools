@@ -18,26 +18,33 @@ defmodule FileTools.Storage do
     Agent.update @me, fn state ->
       md5_storage = add_md5_data(state[:md5], row)
       attr_storage = add_attr_data(state[:attr], row)
-      %{state | md5: md5_storage, attr: attr_storage}
+      %{state | md5: md5_storage, attr: attr_storage, is_changed: true}
     end
   end
 
   def save do
-    Agent.get(@me, fn storage ->
-      csv_file = storage[:file]
-      backup_storage(csv_file)
+    Agent.update(@me, fn state ->
+      if state[:is_changed] do
+        csv_file = state[:file]
+        backup_storage(csv_file)
 
-      Logger.info "Storage.save CSV #{csv_file}"
-      save_storage(storage[:md5], csv_file, :csv)
+        Logger.info "Storage.save CSV #{csv_file}"
+        save_storage(state[:md5], csv_file, :csv)
 
-      md5_file = if String.ends_with?(csv_file, ".csv") do
-        String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
+        md5_file = if String.ends_with?(csv_file, ".csv") do
+          String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
+        else
+          csv_file <> ".md5"
+        end
+
+        Logger.info "Storage.save MD5 #{md5_file}"
+        save_storage(state[:md5], md5_file, :md5)
+
+        %{state | is_changed: false}
       else
-        csv_file <> ".md5"
+        Logger.info "Storage.save NOT CHANGED"
+        state
       end
-
-      Logger.info "Storage.save MD5 #{md5_file}"
-      save_storage(storage[:md5], md5_file, :md5)
     end, :infinity)
   end
 
@@ -76,7 +83,7 @@ defmodule FileTools.Storage do
     end)
 
     Logger.info "Storage size: #{map_size(md5_storage)}"
-    %{md5: md5_storage, attr: attr_storage, file: storage_file}
+    %{md5: md5_storage, attr: attr_storage, file: storage_file, is_changed: false}
   end
 
   def save_storage(storage, storage_file, :csv) do
