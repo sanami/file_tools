@@ -7,7 +7,8 @@ defmodule FileTools.MixProject do
       version: "0.1.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -16,6 +17,12 @@ defmodule FileTools.MixProject do
     [
       extra_applications: [:logger, :crypto],
       mod: {FileTools.Application, []}
+    ]
+  end
+
+  defp aliases do
+    [
+      run: "run_no_halt"
     ]
   end
 

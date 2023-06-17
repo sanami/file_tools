@@ -1,23 +1,29 @@
 defmodule FileTools.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
-
   use Application
+  require Logger
 
   @impl true
-  def start(_type, _args) do
+  def start(type, args) do
+    Logger.info "FileTools.Application.start #{type} #{args}"
+
     if Mix.env() == :test do
       {:ok, self()}
     else
       children = [
         {FileTools.Storage, "data/files.csv"},
         {FileTools.FileSupervisor, 1},
-        {FileTools.FileDispatcher, 2}
+        {FileTools.FileDispatcher, 2},
+        {FileTools.FileFinder, "/media/veracrypt1/frost/downloads"}
       ]
 
       opts = [strategy: :rest_for_one, name: FileTools.Supervisor]
       Supervisor.start_link(children, opts)
     end
+  end
+
+  @impl true
+  def stop(state) do
+    Logger.info "FileTools.Application.stop #{state}"
+    :ok
   end
 end

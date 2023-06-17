@@ -64,7 +64,7 @@ defmodule FileTools.FileDispatcher do
       if state[:find_status] == :completed do
         worker_count = state[:worker_count] - 1
         if worker_count == 0 do
-          FileTools.Storage.save()
+          FileTools.FileFinder.done()
         end
 
         {:reply, :finish, %{state | worker_count: worker_count}}
