@@ -3,42 +3,38 @@ defmodule FileTools.FileFinder do
 
   @min_size 1000_000
 
-  def list_folder(parent_pid, folder) do
+  def list_folder(folder) do
     Logger.debug "FileFinder.list_folder #{folder}"
-    unless parent_pid, do: FileTools.FileDispatcher.set_find_status(:started)
 
     File.ls!(folder)
-    |> Enum.reduce([], fn entry, child_pids ->
+    |> Enum.reduce([], fn entry, child_tasks ->
         entry = Path.join(folder, entry)
         case File.stat(entry) do
           {:ok, stat} ->
             case stat.type do
               :directory ->
-                pid = spawn_link(FileTools.FileFinder, :list_folder, [self(), entry])
-                [pid|child_pids]
+                task = Task.async(FileTools.FileFinder, :list_folder, [entry])
+                [task|child_tasks]
               :regular ->
                 if stat.size >= @min_size, do: FileTools.FileDispatcher.queue_file(entry, stat)
-                child_pids
+                child_tasks
               _ ->
-                child_pids
+                child_tasks
             end
           {:error, reason} ->
             Logger.error reason
-            child_pids
+            child_tasks
         end
       end)
-    |> Enum.each(fn pid ->
-      receive do
-        ^pid ->
-          Logger.debug "FileFinder.list_folder done #{inspect pid}"
-          :ok
-      end
-    end)
+    |> Task.await_many(:infinity)
 
-    if parent_pid, do: send(parent_pid, self()), else: FileTools.FileDispatcher.set_find_status(:completed)
+    Logger.debug "FileFinder.list_folder done #{folder}"
+    :ok
   end
 
   def run(start_folder) do
-    list_folder(nil, start_folder)
+    FileTools.FileDispatcher.set_find_status(:started)
+    list_folder(start_folder)
+    FileTools.FileDispatcher.set_find_status(:completed)
   end
 end
