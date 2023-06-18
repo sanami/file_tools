@@ -44,7 +44,7 @@ defmodule FileTools.FileFinder do
     File.ls!(folder)
     |> Enum.reduce([], fn entry, child_tasks ->
         entry = Path.join(folder, entry)
-        case File.stat(entry) do
+        case File.lstat(entry) do
           {:ok, stat} ->
             case stat.type do
               :directory ->
