@@ -18,7 +18,8 @@ defmodule FileTools.FileFinder do
   def init(folder) do
     Logger.info "FileFinder.init #{folder}"
     state = %{folder: folder}
-    Process.send_after(self(), :run, 0)
+
+    unless IEx.started?(), do: run()
 
     {:ok, state}
   end
@@ -65,6 +66,10 @@ defmodule FileTools.FileFinder do
 
     Logger.debug "FileFinder.list_folder done #{folder}"
     :ok
+  end
+
+  def run do
+    Process.send_after(@me, :run, 0)
   end
 
   def run(start_folder) do
