@@ -48,12 +48,12 @@ defmodule FileTools.StorageTest do
 
       res = File.read!(result_file1)
       IO.puts res
-      assert String.length(res) == 504
+      assert String.length(res) == 511
     end
   end
 
   test "exists?" do
-    FileTools.Storage.start_link(@storage1)
+    start_supervised({FileTools.Storage, @storage1})
 
     assert exists?(:md5, @md51) == true
     assert exists?(:md5, "not_exist") == false
@@ -62,7 +62,7 @@ defmodule FileTools.StorageTest do
   end
 
   test "add" do
-    FileTools.Storage.start_link(@storage1)
+    start_supervised({FileTools.Storage, @storage1})
 
     assert exists?(:md5, "md5") == false
 

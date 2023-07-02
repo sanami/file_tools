@@ -3,6 +3,7 @@ defmodule FileTools.FileDispatcher do
   require Logger
 
   @me __MODULE__
+
   # API
   def start_link(init_arg) do
     GenServer.start_link(@me, init_arg, name: @me)
@@ -22,15 +23,15 @@ defmodule FileTools.FileDispatcher do
 
   # Callbacks
   @impl true
-  def init(init_arg) do
-    Logger.info "FileDispatcher.init #{init_arg}"
+  def init(init_arg \\ %{}) do
+    Logger.info "FileDispatcher.init #{inspect init_arg}"
     state = %{
       queue: [],
       find_status: :not_started,
       worker_count: 0,
       processed_count: 0,
       max_worker_count: :erlang.system_info(:logical_processors_available)
-    }
+    } |> Map.merge(init_arg)
 
     {:ok, state}
   end

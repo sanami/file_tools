@@ -12,7 +12,7 @@ defmodule FileTools.Application do
       children = [
         {FileTools.Storage, "data/files.csv"},
         {FileTools.FileSupervisor, 1},
-        {FileTools.FileDispatcher, 2},
+        {FileTools.FileDispatcher, %{}},
         {FileTools.FileFinder, "/media/veracrypt1/frost/downloads"}
       ]
 
