@@ -1,53 +1,78 @@
 defmodule FileTools.Storage do
-  use Agent
+  use GenServer
   require Logger
 
   @me __MODULE__
   @headers ~w(md5 fs_path size mtime crc32 archive_path)a
 
-  def start_link(storage_file) do
-    storage = load_storage(storage_file)
-    Agent.start_link(fn -> storage end, name: @me)
+  def start_link(init_arg) do
+    GenServer.start_link(@me, init_arg, name: @me)
   end
 
   def exists?(type, key) do
-    Agent.get(@me, &Map.has_key?(&1[type], key), :infinity)
+    GenServer.call(@me, {:exists?, type, key}, :infinity)
   end
 
   def add(row) do
-    Agent.update @me, fn state ->
-      md5_storage = add_md5_data(state[:md5], row)
-      attr_storage = add_attr_data(state[:attr], row)
-      %{state | md5: md5_storage, attr: attr_storage, is_changed: true}
-    end
+    GenServer.cast(@me, {:add, row})
   end
 
   def save do
-    Agent.update(@me, fn state ->
-      if state[:is_changed] do
-        csv_file = state[:file]
-        backup_storage(csv_file)
-
-        Logger.info "Storage.save CSV #{csv_file}"
-        save_storage(state[:md5], csv_file, :csv)
-
-        md5_file = if String.ends_with?(csv_file, ".csv") do
-          String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
-        else
-          csv_file <> ".md5"
-        end
-
-        Logger.info "Storage.save MD5 #{md5_file}"
-        save_storage(state[:md5], md5_file, :md5)
-
-        %{state | is_changed: false}
-      else
-        Logger.info "Storage.save NOT CHANGED"
-        state
-      end
-    end, :infinity)
+    GenServer.call(@me, :save, :infinity)
   end
 
+  # Callbacks
+  @impl true
+  def init(storage_file) do
+    Logger.info "Storage.init #{storage_file}"
+    state = load_storage(storage_file)
+
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_call({:exists?, type, key}, _from, state) do
+    res = Map.has_key?(state[type], key)
+    {:reply, res, state}
+  end
+
+  @impl true
+  def handle_call(:save, _from, state) do
+    new_state = if state[:is_changed] do
+      csv_file = state[:file]
+      backup_storage(csv_file)
+
+      Logger.info "Storage.save CSV #{csv_file}"
+      save_storage(state[:md5], csv_file, :csv)
+
+      md5_file = if String.ends_with?(csv_file, ".csv") do
+        String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
+      else
+        csv_file <> ".md5"
+      end
+
+      Logger.info "Storage.save MD5 #{md5_file}"
+      save_storage(state[:md5], md5_file, :md5)
+
+      %{state | is_changed: false}
+    else
+      Logger.info "Storage.save NOT CHANGED"
+      state
+    end
+
+    {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_cast({:add, row}, state) do
+    md5_storage = add_md5_data(state[:md5], row)
+    attr_storage = add_attr_data(state[:attr], row)
+    new_state = %{state | md5: md5_storage, attr: attr_storage, is_changed: true}
+
+    {:noreply, new_state}
+  end
+
+  # Internal
   def add_md5_data(md5_storage, row) do
     Map.update(md5_storage, row[:md5], [row], fn existing_rows ->
       [row | existing_rows]
