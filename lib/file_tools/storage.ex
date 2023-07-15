@@ -25,7 +25,7 @@ defmodule FileTools.Storage do
   @impl true
   def init(storage_file) do
     Logger.info "Storage.init #{storage_file}"
-    state = @storage_module.load_storage(storage_file)
+    state = @storage_module.init(%{}, storage_file)
     {:ok, state}
   end
 

@@ -1,19 +1,28 @@
 defmodule Storage.HashBased do
+  @behaviour Storage.Interface
+
   require Logger
 
   @headers ~w(md5 fs_path size mtime crc32 archive_path)a
 
-  # API
+  @impl true
+  def init(_state, storage_file) do
+    load_storage(storage_file)
+  end
+
+  @impl true
   def exists?(state, type, key) do
     Map.has_key?(state[type], key)
   end
 
+  @impl true
   def add(state, row) do
     md5_storage = add_md5_data(state[:md5], row)
     attr_storage = add_attr_data(state[:attr], row)
     %{state | md5: md5_storage, attr: attr_storage, is_changed: true}
   end
 
+  @impl true
   def save(state) do
     if state[:is_changed] do
       csv_file = state[:file]
@@ -38,6 +47,7 @@ defmodule Storage.HashBased do
     end
   end
 
+  @impl true
   def load_storage(storage_file) do
     md5_storage = storage_file
     |> File.stream!

@@ -56,4 +56,14 @@ defmodule Storage.HashBasedTest do
     IO.inspect res
     assert String.starts_with?(res, "tmp/backup")
   end
+
+  test "exists?" do
+    data1 = Storage.load_storage(@storage1)
+
+    assert Storage.exists?(data1, :md5, @md51) == true
+    assert Storage.exists?(data1, :md5, "not_exist") == false
+    assert Storage.exists?(data1, :attr, @attr1) == true
+    assert Storage.exists?(data1, :attr, {}) == false
+    assert Storage.exists?(data1, :attr, 1) == false
+  end
 end
