@@ -4,11 +4,11 @@ defmodule FileTools.Application do
 
   @impl true
   def start(type, args) do
-    Logger.info "FileTools.Application.start #{type} #{args}"
-
     if Mix.env() == :test do
       {:ok, self()}
     else
+      Logger.info "FileTools.Application.start #{type} #{args}"
+
       children = [
         {FileTools.Storage, "data/files.csv"},
         {FileTools.FileSupervisor, 1},

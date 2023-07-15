@@ -2,7 +2,7 @@ defmodule FileTools.CsvChecker do
   require Logger
 
   def run(:freenet_hashes, storage_file, input_file) do
-    storage = FileTools.Storage.load_storage(storage_file)
+    storage = Storage.HashBased.load_storage(storage_file)
 
     input_file
     |> File.stream!
