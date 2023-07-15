@@ -19,7 +19,7 @@ defmodule FileTools.FileFinder do
     Logger.info "FileFinder.init #{folder}"
     state = %{folder: folder}
 
-    unless IEx.started?(), do: run()
+    if FileTools.auto_scan?, do: run()
 
     {:ok, state}
   end
@@ -34,7 +34,7 @@ defmodule FileTools.FileFinder do
   def handle_cast(:done, state) do
     FileTools.Storage.save()
 
-    unless IEx.started?(), do: System.stop(0) # exit app
+    if FileTools.auto_scan?, do: System.stop(0) # exit app
 
     {:noreply, state}
   end

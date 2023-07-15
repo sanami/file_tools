@@ -1,5 +1,6 @@
 defmodule FileTools do
-  def hello do
-    :world
+  def auto_scan? do
+    # !IEx.started?
+    "scan" in System.argv
   end
 end

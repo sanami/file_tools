@@ -1,7 +1,7 @@
 defmodule FileToolsTest do
   use ExUnit.Case
 
-  test "hello" do
-    assert FileTools.hello() == :world
+  test "auto_scan" do
+    assert FileTools.auto_scan? == false
   end
 end
