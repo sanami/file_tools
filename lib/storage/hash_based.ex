@@ -23,36 +23,39 @@ defmodule Storage.HashBased do
   end
 
   @impl true
-  def save(state) do
-    if state[:is_changed] do
-      csv_file = state[:file]
-      backup_storage(csv_file)
-
-      Logger.info "Storage.save CSV #{csv_file}"
-      save_storage(state[:md5], csv_file, :csv)
-
-      md5_file = if String.ends_with?(csv_file, ".csv") do
-        String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
-      else
-        csv_file <> ".md5"
-      end
-
-      Logger.info "Storage.save MD5 #{md5_file}"
-      save_storage(state[:md5], md5_file, :md5)
-
-      %{state | is_changed: false}
-    else
-      Logger.info "Storage.save NOT CHANGED"
-      state
-    end
-  end
-
-  @impl true
   def load(_state, storage_file) do
     {md5_storage, attr_storage} = load_storage(storage_file)
     Logger.info "Storage size: #{map_size(md5_storage)}"
 
     %{md5: md5_storage, attr: attr_storage, file: storage_file, is_changed: false}
+  end
+
+  @impl true
+  def save_storage(state, storage_file, :csv) do
+    stream = Stream.transform state[:md5], nil, fn {_md5, dup_entries}, acc ->
+      # dup_entries = Enum.map dup_entries, fn row -> Map.values(row) end
+      {dup_entries, acc}
+    end
+
+    File.open!(storage_file, [:write, :utf8], fn file ->
+      stream
+      |> CSV.encode(delimiter: "\n", headers: @headers)
+      |> Enum.each(&IO.write(file, &1))
+    end)
+
+    :ok
+  end
+
+  @impl true
+  def save_storage(state, storage_file, :md5) do
+    File.open! storage_file, [:write, :utf8], fn file ->
+      Enum.each state[:md5], fn {_md5, dup_entries} ->
+        row = hd(dup_entries)
+        IO.write(file, [row[:md5], " ", "*", row[:fs_path], "\n"])
+      end
+    end
+
+    :ok
   end
 
   # Internal
@@ -83,42 +86,5 @@ defmodule Storage.HashBased do
     |> Enum.reduce({%{}, %{}}, fn row, {md5_storage, attr_storage} ->
       {add_md5_data(md5_storage, row), add_attr_data(attr_storage, row)}
     end)
-  end
-
-  def save_storage(storage, storage_file, :csv) do
-    stream = Stream.transform storage, nil, fn {_md5, dup_entries}, acc ->
-      # dup_entries = Enum.map dup_entries, fn row -> Map.values(row) end
-      {dup_entries, acc}
-    end
-
-    File.open!(storage_file, [:write, :utf8], fn file ->
-      stream
-      |> CSV.encode(delimiter: "\n", headers: @headers)
-      |> Enum.each(&IO.write(file, &1))
-    end)
-  end
-
-  def save_storage(storage, storage_file, :md5) do
-    File.open! storage_file, [:write, :utf8], fn file ->
-      Enum.each storage, fn {_md5, dup_entries} ->
-        row = hd(dup_entries)
-        IO.write(file, [row[:md5], " ", "*", row[:fs_path], "\n"])
-      end
-    end
-  end
-
-  def backup_storage(storage_file, pretend \\ false) do
-    backup_folder = "tmp/backup"
-    File.mkdir_p(backup_folder)
-
-    with {:ok, stat} <- File.stat(storage_file) do
-      mtime = stat.mtime |> FileTools.FileWorker.file_time |> DateTime.to_unix
-      backup_file = Path.join(backup_folder, "#{Path.basename(storage_file)}.#{mtime}")
-
-      Logger.info "Storage.backup_storage #{backup_file}"
-      unless pretend, do: File.rename(storage_file, backup_file)
-
-      backup_file
-    end
   end
 end

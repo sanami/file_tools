@@ -21,13 +21,11 @@ defmodule Storage.HashBasedTest do
   describe "save_storage" do
     @tag tmp_dir: true
     test "csv", context do
-      {md5, _attr} = Storage.load_storage(@storage1)
-      IO.inspect md5
-
+      state1 = Storage.load(%{}, @storage1)
       result_file1 = Path.join(context[:tmp_dir], "storage1.csv")
       IO.inspect result_file1
 
-      res = Storage.save_storage(md5, result_file1, :csv)
+      res = Storage.save_storage(state1, result_file1, :csv)
       IO.inspect res
 
       res = File.read!(result_file1)
@@ -37,23 +35,17 @@ defmodule Storage.HashBasedTest do
 
     @tag tmp_dir: true
     test "md5", %{tmp_dir: tmp_dir} do
-      {md5, _attr} = Storage.load_storage(@storage1)
+      state1 = Storage.load(%{}, @storage1)
       result_file1 = Path.join(tmp_dir, "files.md5")
       IO.inspect result_file1
 
-      res = Storage.save_storage(md5, result_file1, :md5)
+      res = Storage.save_storage(state1, result_file1, :md5)
       IO.inspect res
 
       res = File.read!(result_file1)
       IO.puts res
       assert String.length(res) == 511
     end
-  end
-
-  test "backup_storage" do
-    res = Storage.backup_storage(@storage1, true)
-    IO.inspect res
-    assert String.starts_with?(res, "tmp/backup")
   end
 
   test "exists?" do

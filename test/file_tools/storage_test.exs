@@ -35,4 +35,10 @@ defmodule FileTools.StorageTest do
     Storage.add(row)
     assert Storage.exists?(:md5, "md5")
   end
+
+  test "backup_storage" do
+    res = Storage.backup_storage(@storage1, true)
+    IO.inspect res
+    assert String.starts_with?(res, "tmp/backup")
+  end
 end

@@ -40,7 +40,7 @@ defmodule FileTools.Storage do
 
   @impl true
   def handle_call(:save, _from, state) do
-    new_state = @storage_module.save(state)
+    new_state = save(state)
     {:reply, :ok, new_state}
   end
 
@@ -48,5 +48,45 @@ defmodule FileTools.Storage do
   def handle_cast({:add, row}, state) do
     new_state = @storage_module.add(state, row)
     {:noreply, new_state}
+  end
+
+  # Internal
+  def save(state) do
+    if state[:is_changed] do
+      csv_file = state[:file]
+      backup_storage(csv_file)
+
+      Logger.info "Storage.save CSV #{csv_file}"
+      @storage_module.save_storage(state, csv_file, :csv)
+
+      md5_file = if String.ends_with?(csv_file, ".csv") do
+        String.replace(csv_file, ~r/.csv\z/, ".md5", global: false)
+      else
+        csv_file <> ".md5"
+      end
+
+      Logger.info "Storage.save MD5 #{md5_file}"
+      @storage_module.save_storage(state, md5_file, :md5)
+
+      %{state | is_changed: false}
+    else
+      Logger.info "Storage.save NOT CHANGED"
+      state
+    end
+  end
+
+  def backup_storage(storage_file, pretend \\ false) do
+    backup_folder = "tmp/backup"
+    File.mkdir_p(backup_folder)
+
+    with {:ok, stat} <- File.stat(storage_file) do
+      mtime = stat.mtime |> FileTools.FileWorker.file_time |> DateTime.to_unix
+      backup_file = Path.join(backup_folder, "#{Path.basename(storage_file)}.#{mtime}")
+
+      Logger.info "Storage.backup_storage #{backup_file}"
+      unless pretend, do: File.rename(storage_file, backup_file)
+
+      backup_file
+    end
   end
 end
