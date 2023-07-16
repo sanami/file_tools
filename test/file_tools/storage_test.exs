@@ -33,6 +33,7 @@ defmodule FileTools.StorageTest do
     IO.inspect row
 
     Storage.add(row)
+    Process.sleep 77
     assert Storage.exists?(:md5, "md5")
   end
 

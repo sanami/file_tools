@@ -3,14 +3,15 @@ defmodule FileTools.Storage do
   require Logger
 
   @me __MODULE__
-  @storage_module Storage.HashBased
+  # @storage_module Storage.HashBased
+  @storage_module Storage.EtsBased
 
   def start_link(init_arg) do
     GenServer.start_link(@me, init_arg, name: @me)
   end
 
   def exists?(type, key) do
-    GenServer.call(@me, {:exists?, type, key}, :infinity)
+    @storage_module.exists?(nil, type, key)
   end
 
   def add(row) do
@@ -30,12 +31,6 @@ defmodule FileTools.Storage do
     |> @storage_module.load(storage_file)
 
     {:ok, state}
-  end
-
-  @impl true
-  def handle_call({:exists?, type, key}, _from, state) do
-    res = @storage_module.exists?(state, type, key)
-    {:reply, res, state}
   end
 
   @impl true
