@@ -8,27 +8,26 @@ defmodule Storage.HashBasedTest do
   @attr1 {"1.jpg", 1715762, ~U[2013-12-01 13:14:51Z]}
 
   test "load_storage" do
-    res = Storage.load_storage(@storage1)
-    IO.inspect res
-    assert map_size(res[:md5]) == 7
-    assert length(res[:md5][@md51]) == 3
+    {md5, attr} = Storage.load_storage(@storage1)
+    IO.inspect md5
+    assert map_size(md5) == 7
+    assert length(md5[@md51]) == 3
 
-    assert map_size(res[:attr]) == 8
-    assert length(res[:attr][@attr1]) == 2
-
-    assert res[:file] == @storage1
+    IO.inspect attr
+    assert map_size(attr) == 8
+    assert length(attr[@attr1]) == 2
   end
 
   describe "save_storage" do
     @tag tmp_dir: true
     test "csv", context do
-      data1 = Storage.load_storage(@storage1)
-      IO.inspect data1
+      {md5, _attr} = Storage.load_storage(@storage1)
+      IO.inspect md5
 
       result_file1 = Path.join(context[:tmp_dir], "storage1.csv")
       IO.inspect result_file1
 
-      res = Storage.save_storage(data1[:md5], result_file1, :csv)
+      res = Storage.save_storage(md5, result_file1, :csv)
       IO.inspect res
 
       res = File.read!(result_file1)
@@ -38,11 +37,11 @@ defmodule Storage.HashBasedTest do
 
     @tag tmp_dir: true
     test "md5", %{tmp_dir: tmp_dir} do
-      data1 = Storage.load_storage(@storage1)
+      {md5, _attr} = Storage.load_storage(@storage1)
       result_file1 = Path.join(tmp_dir, "files.md5")
       IO.inspect result_file1
 
-      res = Storage.save_storage(data1[:md5], result_file1, :md5)
+      res = Storage.save_storage(md5, result_file1, :md5)
       IO.inspect res
 
       res = File.read!(result_file1)
@@ -58,12 +57,12 @@ defmodule Storage.HashBasedTest do
   end
 
   test "exists?" do
-    data1 = Storage.load_storage(@storage1)
+    state1 = Storage.load(%{}, @storage1)
 
-    assert Storage.exists?(data1, :md5, @md51) == true
-    assert Storage.exists?(data1, :md5, "not_exist") == false
-    assert Storage.exists?(data1, :attr, @attr1) == true
-    assert Storage.exists?(data1, :attr, {}) == false
-    assert Storage.exists?(data1, :attr, 1) == false
+    assert Storage.exists?(state1, :md5, @md51) == true
+    assert Storage.exists?(state1, :md5, "not_exist") == false
+    assert Storage.exists?(state1, :attr, @attr1) == true
+    assert Storage.exists?(state1, :attr, {}) == false
+    assert Storage.exists?(state1, :attr, 1) == false
   end
 end

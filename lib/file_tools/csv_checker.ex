@@ -2,7 +2,7 @@ defmodule FileTools.CsvChecker do
   require Logger
 
   def run(:freenet_hashes, storage_file, input_file) do
-    storage = Storage.HashBased.load_storage(storage_file)
+    {storage, _} = Storage.HashBased.load_storage(storage_file)
 
     input_file
     |> File.stream!
@@ -10,7 +10,7 @@ defmodule FileTools.CsvChecker do
     |> Stream.with_index
     |> Enum.reduce([], fn {row, i}, acc ->
       md5 = row["Hashes.MD5"]
-      if storage[:md5][md5] do
+      if storage[md5] do
         Logger.debug "#{i} exist #{row["key"]}"
         acc
       else

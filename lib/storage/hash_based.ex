@@ -6,8 +6,8 @@ defmodule Storage.HashBased do
   @headers ~w(md5 fs_path size mtime crc32 archive_path)a
 
   @impl true
-  def init(_state, storage_file) do
-    load_storage(storage_file)
+  def init(state) do
+    state
   end
 
   @impl true
@@ -48,27 +48,10 @@ defmodule Storage.HashBased do
   end
 
   @impl true
-  def load_storage(storage_file) do
-    md5_storage = storage_file
-    |> File.stream!
-    |> CSV.decode!(headers: @headers)
-    |> Stream.drop(1) # header row
-    |> Stream.map(fn row ->
-        {:ok, mtime, _} = DateTime.from_iso8601(row[:mtime])
-        size = String.to_integer(row[:size])
-        %{row | mtime: mtime, size: size}
-      end)
-    |> Enum.reduce(%{}, fn row, acc ->
-      add_md5_data(acc, row)
-    end)
-
-    attr_storage = Enum.reduce(md5_storage, %{}, fn {_md5, rows}, acc ->
-      Enum.reduce(rows, acc, fn row, acc ->
-        add_attr_data(acc, row)
-      end)
-    end)
-
+  def load(_state, storage_file) do
+    {md5_storage, attr_storage} = load_storage(storage_file)
     Logger.info "Storage size: #{map_size(md5_storage)}"
+
     %{md5: md5_storage, attr: attr_storage, file: storage_file, is_changed: false}
   end
 
@@ -84,6 +67,21 @@ defmodule Storage.HashBased do
 
     Map.update(attr_storage, key, [row], fn existing_rows ->
       [row | existing_rows]
+    end)
+  end
+
+  def load_storage(storage_file) do
+    storage_file
+    |> File.stream!
+    |> CSV.decode!(headers: @headers)
+    |> Stream.drop(1) # header row
+    |> Stream.map(fn row ->
+        {:ok, mtime, _} = DateTime.from_iso8601(row[:mtime])
+        size = String.to_integer(row[:size])
+        %{row | mtime: mtime, size: size}
+      end)
+    |> Enum.reduce({%{}, %{}}, fn row, {md5_storage, attr_storage} ->
+      {add_md5_data(md5_storage, row), add_attr_data(attr_storage, row)}
     end)
   end
 
